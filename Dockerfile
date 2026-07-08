@@ -15,6 +15,7 @@ RUN apt-get update \
         libfreetype6-dev \
         libharfbuzz-dev \
         libfribidi-dev \
+        libglpk-dev \
         libpng-dev \
         libtiff5-dev \
         libjpeg-dev \
@@ -27,10 +28,6 @@ COPY . /tmp/RamEx
 RUN rm -f /tmp/RamEx/src/*.o /tmp/RamEx/src/*.so /tmp/RamEx/src/*.dll
 RUN R -e "install.packages('remotes')"
 RUN R -e "remotes::install_deps('/tmp/RamEx', dependencies = TRUE, upgrade = 'never')"
-
-# RamEx ships only a Windows Makevars; force the plain TinyThread backend
-# for RcppParallel instead of relying on this build's TBB support.
-RUN echo 'PKG_CPPFLAGS += -DRCPP_PARALLEL_USE_TBB=0' > /tmp/RamEx/src/Makevars
 
 RUN R CMD INSTALL /tmp/RamEx \
     && R -e "library(RamEx)" \
