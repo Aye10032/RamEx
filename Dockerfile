@@ -6,9 +6,6 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         ca-certificates \
         git \
-        r-cran-ggplot2 \
-        r-cran-jsonlite \
-        r-cran-remotes \
         libxml2-dev \
         libcurl4-openssl-dev \
         libssl-dev \
@@ -28,6 +25,7 @@ RUN apt-get update \
 COPY . /tmp/RamEx
 
 RUN rm -f /tmp/RamEx/src/*.o /tmp/RamEx/src/*.so /tmp/RamEx/src/*.dll
+RUN R -e "install.packages('remotes')"
 RUN R -e "remotes::install_deps('/tmp/RamEx', dependencies = TRUE, upgrade = 'never')"
 
 # RamEx ships only a Windows Makevars; force the plain TinyThread backend
