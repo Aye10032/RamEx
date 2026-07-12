@@ -22,8 +22,7 @@ By providing simple-to-use modules for computational tasks that otherwise would 
 More complete information about how to use RamEx can be found in the [github](https://github.com/qibebt-bioinfo/RamEx), but here you'll find a brief overview of the function and examples to mining of ramanomes:
 
 ##Installaiton
-library(devtools)
-install_github("qibebt-bioinfo/RamEx")
+remotes("qibebt-bioinfo/RamEx")
 ##Getting Started
 # Data Loading
 RamEx reads multiple spectral data files from a target directory and automatically identifies their structure — whether single spectra, mapping matrices, and coordinate‑based scans —
@@ -100,7 +99,7 @@ data_cos <- Intraramanome.Analysis.2Dcos(data_cleaned)
 # Phenotype analysis
 RamEx provides four types of phenotype analysis: Louvain clustering, K-means clustering, Gaussian mixture model and hierarchical clustering.
 ```{r}
-clusters_louvain <- Phenotype.Analysis.Louvaincluster(object = data_cleaned, resolutions = c( 0.8)) 
+clusters_louvain <- Phenotype.Analysis.Louvain(object = data_cleaned, resolutions = c( 0.8)) 
 clusters_kmneans <- Phenotype.Analysis.Kmeans(data_cleaned,5)
 clusters_hca <- Phenotype.Analysis.Hca(data_cleaned)
 clusters_gmm <- Phenotype.Analysis.Gmm(data_cleaned)

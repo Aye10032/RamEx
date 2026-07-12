@@ -1,5 +1,5 @@
 src/*.o
-src/*.so
+src/*.obj
 src/*.dll
-src/*.rds
-src/symbols.rds
+src/*.so
+src/*.dylib

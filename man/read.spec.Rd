@@ -14,6 +14,7 @@ read.spec(
   group_splits = "/|_",
   cutoff = c(500, 3150),
   interpolation = FALSE,
+  orientation = "auto",
   n_cores = 1
 )
 }
@@ -51,6 +52,14 @@ If `TRUE`, performs natural spline interpolation across uniformly spaced wavenum
 within `cutoff`.  
 If `FALSE`, the spectra are directly truncated to the specified range without interpolation.}
 
+\item{orientation}{Character.
+Specifies the data orientation. Can be "auto", "column", or "row".
+If `auto`, RamEx will identify each file's spectral layout respectively. 
+This process may be slow on account of the format-checking, but could best adapt to various formats. \n
+If `column`/`row`, the first column/row will be extract as the wavenumber 
+and others will be seen as signal intensities.
+Default: `auto`}
+
 \item{n_cores}{Integer.
 Number of CPU cores to use for parallel reading.  
 If `n_cores > 1`, the function runs in parallel;  
@@ -64,6 +73,9 @@ A `Ramanome` object containing:
   \item \code{wavenumber} — the common wavenumber vector
   \item \code{meta.data} — a data frame storing group labels and source filenames
 }
+
+**Warning**: When multiple batches have been detected, `read.spec` will return a list containing several Ramanome objects.
+In such cases, use `rbind2` to merge these objects or set `interpolation` as TRUE or set `detect_batch` as False.
 }
 \description{
 Reads multiple spectral data files from a target directory and automatically

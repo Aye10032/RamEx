@@ -1,3 +1,66 @@
+#' Prepare quantification labels
+#' @noRd 
+prepare_quantification_labels <- function(group,
+                                          factor_levels = NULL,
+                                          expect_numeric = NULL) {
+  group_character <- trimws(as.character(group))
+
+  if (anyNA(group_character) || any(group_character == "")) {
+    stop("`group` contains missing or empty values.")
+  }
+
+  numeric_values <- suppressWarnings(as.numeric(group_character))
+  is_numeric_group <- all(!is.na(numeric_values))
+
+  if (!is_numeric_group) {
+    numeric_pattern <- paste0(
+      "^[^0-9]*(",
+      "(?:\\d*\\.\\d+|\\d+\\.?\\d*)(?:[eE][-+]?\\d+)?",
+      ")[^0-9]*$"
+    )
+
+    extracted_values <- stringr::str_match(
+      group_character,
+      numeric_pattern
+    )[, 2]
+
+    extracted_numeric <- suppressWarnings(as.numeric(extracted_values))
+
+    if (all(!is.na(extracted_numeric))) {
+      numeric_values <- extracted_numeric
+      is_numeric_group <- TRUE
+    }
+  }
+
+  if (!is.null(expect_numeric) && is_numeric_group != expect_numeric) {
+    stop("Training and test `group` must use the same label type.")
+  }
+
+  if (is_numeric_group) {
+    return(list(
+      values = numeric_values,
+      is_numeric = TRUE,
+      levels = NULL
+    ))
+  }
+
+  if (is.null(factor_levels)) {
+    factor_levels <- if (is.factor(group)) levels(group) else unique(group_character)
+  }
+
+  factor_values <- factor(group_character, levels = factor_levels)
+
+  if (anyNA(factor_values)) {
+    stop("Test `group` contains levels absent from the training data.")
+  }
+
+  list(
+    values = as.numeric(factor_values),
+    is_numeric = FALSE,
+    levels = factor_levels
+  )
+}
+
 #' Partial Least Squares (PLS)
 #'
 #' A regression method that projects predictors and responses to latent variables to maximize covariance.
@@ -23,10 +86,10 @@
 #' quan_pls <- Quantification.Pls(data_processed)
 Quantification.Pls <- function(train, test = NULL,n_comp = 8, show = TRUE, save = FALSE, seed = 42) {
   set.seed(seed)
+  train_label_info <- prepare_quantification_labels(train@meta.data$group)
   if (is.null(test)) {
     data_set <- get.nearest.dataset(train)
-    labels <- train@meta.data$group
-    labels <- as.numeric(str_extract(labels, "\\d+"))
+    labels <- train_label_info$values
     index <- stratified_partition(labels, p = 0.7)
     data_train <- data_set[index,]
     label_train <- as.numeric(labels[index])
@@ -34,11 +97,10 @@ Quantification.Pls <- function(train, test = NULL,n_comp = 8, show = TRUE, save 
     label_val <- labels[-index]
   } else {
     data_train <- get.nearest.dataset(train)
-    label_train <- train@meta.data$group
-    label_train <- as.numeric(str_extract(label_train, "\\d+"))
+    label_train <- train_label_info$values
     data_val <- get.nearest.dataset(test)
-    label_val <- test@meta.data$group
-    label_val <- as.numeric(str_extract(label_val, "\\d+"))
+    test_label_info <- prepare_quantification_labels( test@meta.data$group, factor_levels = train_label_info$levels, expect_numeric = train_label_info$is_numeric)
+    label_val <- test_label_info$values
   }
 
   pls_model <- plsr(label_train ~ data_train, ncomp = n_comp, scale = TRUE, validation = 'none')
@@ -82,9 +144,10 @@ Quantification.Pls <- function(train, test = NULL,n_comp = 8, show = TRUE, save 
 #' quan_mlr <- Quantification.Mlr(data_processed)
 Quantification.Mlr <- function(train, test = NULL, n_pc = 20,show = TRUE, save = FALSE, seed = 42) {
   set.seed(seed)
+  train_label_info <- prepare_quantification_labels(train@meta.data$group)
   if (is.null(test)) {
     data_set <- get.nearest.dataset(train)
-    labels <- train@meta.data$group
+    labels <- train_label_info$values
     index <- stratified_partition(labels, p = 0.7)
     data_train <- data_set[index,]
     label_train <- labels[index]
@@ -92,14 +155,11 @@ Quantification.Mlr <- function(train, test = NULL, n_pc = 20,show = TRUE, save =
     label_val <- labels[-index]
   } else {
     data_train <- get.nearest.dataset(train)
-    label_train <- train@meta.data$group
+    label_train <- train_label_info$values
     data_val <- get.nearest.dataset(test)
-    label_val <- test@meta.data$group
+    test_label_info <- prepare_quantification_labels( test@meta.data$group, factor_levels = train_label_info$levels, expect_numeric = train_label_info$is_numeric)
+    label_val <- test_label_info$values
   }
-  label_train <- str_extract(label_train, "\\d+")
-  label_train <- as.numeric(label_train)
-  label_val <- str_extract(label_val, "\\d+")
-  label_val <- as.numeric(label_val)
   
   data.pca <- prcomp(data_train, scale = TRUE, retx = TRUE)
   data_20 <- scale(data_train, center = data.pca$center, scale = data.pca$scale) %*% data.pca$rotation[, 1:n_pc] %>% as.data.frame
@@ -151,9 +211,10 @@ Quantification.Mlr <- function(train, test = NULL, n_pc = 20,show = TRUE, save =
 #' quan_glm <- Quantification.Glm(data_processed)
 Quantification.Glm <- function(train, test = NULL, n_pc = 20, show = TRUE, save = FALSE, seed = 42) {
   set.seed(seed)
+  train_label_info <- prepare_quantification_labels(train@meta.data$group)
   if (is.null(test)) {
     data_set <- get.nearest.dataset(train)
-    labels <- train@meta.data$group
+    labels <- train_label_info$values
     index <- stratified_partition(labels, p = 0.7)
     data_train <- data_set[index,]
     label_train <- labels[index]
@@ -161,14 +222,11 @@ Quantification.Glm <- function(train, test = NULL, n_pc = 20, show = TRUE, save 
     label_val <- labels[-index]
   } else {
     data_train <- get.nearest.dataset(train)
-    label_train <- train@meta.data$group
+    label_train <- train_label_info$values
     data_val <- get.nearest.dataset(test)
-    label_val <- test@meta.data$group
+    test_label_info <- prepare_quantification_labels( test@meta.data$group, factor_levels = train_label_info$levels, expect_numeric = train_label_info$is_numeric)
+    label_val <- test_label_info$values
   }
-  label_train <- str_extract(label_train, "\\d+")
-  label_train <- as.numeric(label_train)
-  label_val <- str_extract(label_val, "\\d+")
-  label_val <- as.numeric(label_val)
   
   data.pca <- prcomp(data_train, scale = TRUE, retx = TRUE)
   data_20 <- scale(data_train, center = data.pca$center, scale = data.pca$scale) %*% data.pca$rotation[, 1:n_pc] %>% as.data.frame
