@@ -18,7 +18,7 @@
 #' @importFrom data.table fread
 #' @importFrom stats splinefun
 #' @noRd
-read_spectral_file <- function(filepath, sep, cutoff = c(500, 3150), interpolation = FALSE) {
+read_spectral_file <- function(filepath, sep, cutoff = c(500, 3150), interpolation = FALSE, orientation = "auto") {
   if (is.na(filepath) || filepath == "" || !file.exists(filepath)) return(NULL)
   ext <- tools::file_ext(filepath)
   if(is.null(sep)) sep <- "auto"
@@ -40,20 +40,35 @@ read_spectral_file <- function(filepath, sep, cutoff = c(500, 3150), interpolati
 
   spec <- as.matrix(spec)
   storage.mode(spec) <- "numeric"
-  n_cols <- ncol(spec)
-  n_rows <- nrow(spec)
-
-  col_is_wave <- apply(spec,2, function(cl) is_wavenumber(as.numeric(cl)))
-  row_is_wave <- apply(spec,1, function(cl) is_wavenumber(as.numeric(cl)))
-  if (any(col_is_wave) ){
-    orient <- 'col'
-  } else if(is_wavenumber(as.numeric(spec[1,])) ){
+  col_na <- apply(spec,2, function(x)all(is.na(x)))
+  spec <- spec[,!col_na]
+  if (orientation == 'auto'){
+    col_is_wave <- apply(spec,2, function(cl) is_wavenumber(as.numeric(cl)))
+    if (any(col_is_wave) ){
+      orient <- 'column'
+    } else if(is_wavenumber(as.numeric(spec[1,])) ){
+      spec <- t(spec)
+      col_is_wave <- c(TRUE, rep(FALSE, ncol(spec)-1))
+      orient <- 'row'
+    } else {
+      orient <- 'unknown'
+      warning(sprintf("Could not auto-detect orientation for file: %s", basename(filepath)))
+      return(list( orient = orient))}
+  } else if (orientation == 'column') {
+    if (ncol(spec) < 2) {
+         warning(sprintf("File %s has fewer than 2 columns, cannot process with 'col' orientation.", basename(filepath)))
+         return(list(orient = 'unknown'))
+    }
+    if (!is_wavenumber(as.numeric(spec[, 1]))) {
+        warning(sprintf("Orientation set to 'col', but first column of %s may not be a valid wavenumber. Proceeding anyway.", basename(filepath)))
+    }
+    col_is_wave <- c(TRUE, rep(FALSE, ncol(spec) - 1))
+    orient <- 'column'
+  } else {
     spec <- t(spec)
     col_is_wave <- c(TRUE, rep(FALSE, ncol(spec)-1))
     orient <- 'row'
-  } else {
-    orient <- 'unknown'
-    return(list( orient = orient))}
+  }
 
   if (sum(col_is_wave) == 1){
     wave_col <- which(col_is_wave)
@@ -83,15 +98,17 @@ read_spectral_file <- function(filepath, sep, cutoff = c(500, 3150), interpolati
         df$inten
       }))
     } else {
-      warning(sprintf("Unrecognized column arrangement in file: %s", basename(filepath)))
+      warning(sprintf("Unrecognized spectral arrangement in file: %s", basename(filepath)))
       return(list( orient = 'unknown'))
     }
   } else {
-    warning(sprintf("No valid wavenumber column detected in file: %s", basename(filepath)))
+    warning(sprintf("No valid wavenumber %s detected in file: %s", orient, basename(filepath)))
     return(list( orient = 'unknown'))
   }
 
   if (interpolation) {
+    cutoff[1] <- max(cutoff[1], floor(min(wave)))
+    cutoff[2] <- min(cutoff[2], ceiling(max(wave)))
     xout <- seq(cutoff[1], cutoff[2])
     inten_mat <- t(apply(inten_mat, 1, function(inten) {
       fn <- stats::splinefun(wave, inten, "natural")
@@ -159,17 +176,16 @@ is_wavenumber <- function(x) {
 
   rng <- range(x, na.rm = TRUE)
   if (any(!is.finite(rng))) return(FALSE)
-  is_range <- rng[1] > 50 && rng[2] < 6000
   
-  is_monotonic & is_range
+  is_monotonic 
 }
 
 #' Print orient
 #' @noRd
 print_orient <- function(orient_list, filenames){
-  if (all(orient_list == 'col') | all(orient_list == 'row')){
+  if (all(orient_list == 'column') | all(orient_list == 'row')){
     message(sprintf("All spectra were read as %s-oriented.", unique(orient_list)))
-  } else if(all(orient_list %in% c('col','row'))){
+  } else if(all(orient_list %in% c('column','row'))){
     message(sprintf("%d files read as column-oriented samples, %d as row-oriented.",
                     sum(orient_list == "col"), sum(orient_list == "row")))
   } else {
@@ -265,6 +281,14 @@ get_files_from_dir <- function(data_path, file_type){
 #'   If `TRUE`, performs natural spline interpolation across uniformly spaced wavenumbers
 #'   within `cutoff`.  
 #'   If `FALSE`, the spectra are directly truncated to the specified range without interpolation.
+#' 
+#' @param orientation Character.
+#'   Specifies the data orientation. Can be "auto", "column", or "row".
+#'   If `auto`, RamEx will identify each file's spectral layout respectively. 
+#'   This process may be slow on account of the format-checking, but could best adapt to various formats. \n
+#'   If `column`/`row`, the first column/row will be extract as the wavenumber 
+#'   and others will be seen as signal intensities.
+#'   Default: `auto`
 #'
 #' @param n_cores Integer.  
 #'   Number of CPU cores to use for parallel reading.  
@@ -279,6 +303,9 @@ get_files_from_dir <- function(data_path, file_type){
 #'   \item \code{wavenumber} — the common wavenumber vector
 #'   \item \code{meta.data} — a data frame storing group labels and source filenames
 #' }
+#' 
+#' **Warning**: When multiple batches have been detected, `read.spec` will return a list containing several Ramanome objects.
+#' In such cases, use `rbind2` to merge these objects or set `interpolation` as TRUE or set `detect_batch` as False. 
 #'
 #' @details
 #' The parser can automatically interpret and reshape various spectral data layouts.
@@ -324,10 +351,14 @@ read.spec <- function(
     group_splits = '/|_',  
     cutoff = c(500, 3150), 
     interpolation = FALSE, 
+    orientation = 'auto',
     n_cores = 1) {
 
   filenames <- get_files_from_dir(data_path, file_type)
   full_files <- file.path(data_path, filenames)
+  if (!orientation %in% c("auto", "column", "row")){
+    stop(sprintf("Invalid orientation value: '%s'. Use 'auto', 'column', or 'row'.", orientation))
+  }
 
   if (n_cores > 1){
     cl <- makeCluster(n_cores)
@@ -337,11 +368,11 @@ read.spec <- function(
     })
     clusterExport(cl, varlist = c( "read_spectral_file"))
     data_list <- parLapply(cl, full_files, function(x) {
-      read_spectral_file(x, sep, cutoff, interpolation)
+      read_spectral_file(x, sep, cutoff, interpolation, orientation)
     })
     stopCluster(cl)
   } else{
-    data_list <- lapply( full_files, function(x) {read_spectral_file(x, sep, cutoff, interpolation) })
+    data_list <- lapply( full_files, function(x) {read_spectral_file(x, sep, cutoff, interpolation, orientation) })
   }
 
   # Report reading formats within the directory
@@ -435,10 +466,23 @@ build_ramanome_object <- function(
     group.levels = NULL,
     group_splits = "/|_"
 ) {
+
+  if (length(wavenumber) != ncol(data_matrix)) {
+    stop("`wavenumber` length must equal the number of spectral columns.")
+  }
+
+  if (anyNA(wavenumber) || any(!is.finite(wavenumber))) {
+    stop("`wavenumber` must contain only finite numeric values.")
+  }
+
+  if (anyDuplicated(wavenumber)) {
+    stop("`wavenumber` must not contain duplicated values.")
+  }
+
   meta.data_defined <- meta.data
   order_index <- order(wavenumber, decreasing = F)
   wavenumber <- wavenumber[order_index]
-  data_matrix <- data_matrix[,order_index]
+  data_matrix <- data_matrix[,order_index, drop = FALSE]
   len_group <- length(group.index)
   colnames(data_matrix) <- wavenumber
 

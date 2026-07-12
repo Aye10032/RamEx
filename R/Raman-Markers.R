@@ -676,6 +676,7 @@ average_spectra <- function(matrix, group, min.range ){
 #' @return A list containing two data frames: 'markers_single' for single markers and
 #' 'markers_paired' for paired markers, each with their corresponding AUC scores.
 #' @export Raman.Markers.Roc
+#' @useDynLib RamEx, .registration = TRUE
 #' @importFrom utils combn
 #' @importFrom parallel detectCores
 #' @importFrom parallel makeCluster
@@ -683,8 +684,6 @@ average_spectra <- function(matrix, group, min.range ){
 #' @importFrom parallel clusterExport
 #' @importFrom parallel parLapply
 #' @importFrom MLmetrics AUC
-#' @importFrom Rcpp sourceCpp
-#' @import RcppParallel
 #' @examples
 #' data(RamEx_data)
 #' data_processed <- Preprocessing.OneStep(RamEx_data)
@@ -692,15 +691,6 @@ average_spectra <- function(matrix, group, min.range ){
 Raman.Markers.Roc <- function(object, threshold = 0.75, paired = FALSE, batch_size = 1000, n_threads = NULL){
   matrix <- get.nearest.dataset(object)
   group <- object@meta.data$group
-  os_type <- .Platform$OS.type
-  if (os_type == "unix") {
-    file_path <- system.file("libs/RamEx.so", package = "RamEx")
-  } else if (os_type == "windows") {
-    file_path <- system.file("libs\\x64\\RamEx.dll", package = "RamEx")
-  } else {
-    stop("Unsupported operating system.")
-  }
-  dyn.load(file_path)
   wave <- as.numeric(colnames(matrix))
   group <- as.factor(group)
   u_group <- levels(group)

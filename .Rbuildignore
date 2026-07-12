@@ -1,2 +1,3 @@
 ^Paper_reproducibility$
 ^Paper_reproducibility/.* 
+^src/.*\\.(o|obj|dll|so|dylib)$
