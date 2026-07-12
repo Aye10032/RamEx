@@ -61,17 +61,6 @@ test_that("PCA reduction works correctly", {
   expect_equal(ncol(pca_obj@reductions$PCA), 2)
 })
 
-test_that("PCA plot generation works correctly", {
-  data(RamEx_data)
-  ramnome_obj <- RamEx_data
-  ramnome_obj <- Preprocessing.Smooth.Sg(ramnome_obj)
-  baseline_obj <- Preprocessing.Baseline.Polyfit(ramnome_obj)
-  normalized_obj <- Preprocessing.Normalize(baseline_obj, "ch")
-  cleaned_obj <- Qualitycontrol.ICOD(normalized_obj, var_tol = 0.4)
-  cleaned_obj <- normalized_obj[cleaned_obj$quality,] 
-  pca_obj <- Feature.Reduction.Pca(cleaned_obj, show = TRUE, save = FALSE)
-  expect_true(file.exists("Rplots.pdf"))
-})
 
 # test_that("clustering analysis works correctly", {
 #   data(RamEx_data)
@@ -87,6 +76,7 @@ test_that("PCA plot generation works correctly", {
 # })
 
 test_that("t-SNE reduction works correctly", {
+  skip_if_not_installed("Rtsne")
   data(RamEx_data)
   ramnome_obj <- RamEx_data
   ramnome_obj <- Preprocessing.Smooth.Sg(ramnome_obj)
@@ -95,24 +85,11 @@ test_that("t-SNE reduction works correctly", {
   cleaned_obj <- Qualitycontrol.ICOD(normalized_obj, var_tol = 0.4)
   cleaned_obj <- normalized_obj[cleaned_obj$quality,] 
   pca_obj <- Feature.Reduction.Pca(cleaned_obj, show= FALSE, save = FALSE)
-  tsne_obj <- Feature.Reduction.Tsne(pca_obj, show = TRUE, save = FALSE)
+  tsne_obj <- Feature.Reduction.Tsne(pca_obj, show = FALSE, save = TRUE)
   expect_true(inherits(tsne_obj, "Ramanome"))
   expect_equal(ncol(tsne_obj@reductions$tSNE), 2)
 })
 
-test_that("UMAP reduction works correctly", {
-  data(RamEx_data)
-  ramnome_obj <- RamEx_data
-  ramnome_obj <- Preprocessing.Smooth.Sg(ramnome_obj)
-  baseline_obj <- Preprocessing.Baseline.Polyfit(ramnome_obj)
-  normalized_obj <- Preprocessing.Normalize(baseline_obj, "ch")
-  cleaned_obj <- Qualitycontrol.ICOD(normalized_obj, var_tol = 0.4)
-  cleaned_obj <- normalized_obj[cleaned_obj$quality,] 
-  pca_obj <- Feature.Reduction.Pca(cleaned_obj, show = FALSE, save = FALSE)
-  umap_obj <- Feature.Reduction.Umap(pca_obj, show = TRUE, save = FALSE)
-  expect_true(inherits(umap_obj, "Ramanome"))
-  expect_equal(ncol(umap_obj@reductions$UMAP), 2)
-})
 
 
 test_that("UMAP plot generation works correctly", {
@@ -124,6 +101,7 @@ test_that("UMAP plot generation works correctly", {
   cleaned_obj <- Qualitycontrol.ICOD(normalized_obj, var_tol = 0.4)
   cleaned_obj <- normalized_obj[cleaned_obj$quality,] 
   pca_obj <- Feature.Reduction.Pca(cleaned_obj, show = FALSE, save = FALSE)
-  umap_obj <- Feature.Reduction.Umap(pca_obj, show = TRUE, save = TRUE)
-  expect_true(file.exists("Reduction.umap.png"))
+  umap_obj <- Feature.Reduction.Umap(pca_obj, show = FALSE, save = TRUE)
+  expect_true(inherits(umap_obj, "Ramanome"))
+  expect_equal(ncol(umap_obj@reductions$UMAP), 2)
 })

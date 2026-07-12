@@ -1,0 +1,5 @@
+src/*.o
+src/*.obj
+src/*.dll
+src/*.so
+src/*.dylib

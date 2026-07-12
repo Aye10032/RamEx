@@ -183,9 +183,9 @@ is_wavenumber <- function(x) {
 #' Print orient
 #' @noRd
 print_orient <- function(orient_list, filenames){
-  if (all(orient_list == 'col') | all(orient_list == 'row')){
+  if (all(orient_list == 'column') | all(orient_list == 'row')){
     message(sprintf("All spectra were read as %s-oriented.", unique(orient_list)))
-  } else if(all(orient_list %in% c('col','row'))){
+  } else if(all(orient_list %in% c('column','row'))){
     message(sprintf("%d files read as column-oriented samples, %d as row-oriented.",
                     sum(orient_list == "col"), sum(orient_list == "row")))
   } else {
@@ -466,10 +466,23 @@ build_ramanome_object <- function(
     group.levels = NULL,
     group_splits = "/|_"
 ) {
+
+  if (length(wavenumber) != ncol(data_matrix)) {
+    stop("`wavenumber` length must equal the number of spectral columns.")
+  }
+
+  if (anyNA(wavenumber) || any(!is.finite(wavenumber))) {
+    stop("`wavenumber` must contain only finite numeric values.")
+  }
+
+  if (anyDuplicated(wavenumber)) {
+    stop("`wavenumber` must not contain duplicated values.")
+  }
+
   meta.data_defined <- meta.data
   order_index <- order(wavenumber, decreasing = F)
   wavenumber <- wavenumber[order_index]
-  data_matrix <- data_matrix[,order_index]
+  data_matrix <- data_matrix[,order_index, drop = FALSE]
   len_group <- length(group.index)
   colnames(data_matrix) <- wavenumber
 

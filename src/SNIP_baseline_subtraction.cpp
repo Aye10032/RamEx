@@ -26,11 +26,18 @@ void snipInplace(double* data, double* buffer, R_xlen_t n,
     return;
   }
 
+  auto mirrorIndex = [n](R_xlen_t index) {
+    while (index < 0 || index >= n) {
+      index = (index < 0) ? -index : 2 * n - 2 - index;
+    }
+    return index;
+  };
+
   if (decreasing) {
     for (R_xlen_t i = k; i > 0; --i) {
-      for (R_xlen_t j = i; j < n - i; ++j) {
+      for (R_xlen_t j = i; j < n; ++j) {
         double a = data[j];
-        double b = (data[j - i] + data[j + i]) / 2.0;
+        double b = (data[mirrorIndex(j - i)] + data[mirrorIndex(j + i)]) / 2.0;
         buffer[j] = (b < a) ? b : a;
       }
       for (R_xlen_t j = i; j < n - i; ++j) {
@@ -41,7 +48,7 @@ void snipInplace(double* data, double* buffer, R_xlen_t n,
     for (R_xlen_t i = 1; i <= k; ++i) {
       for (R_xlen_t j = i; j < n - i; ++j) {
         double a = data[j];
-        double b = (data[j - i] + data[j + i]) / 2.0;
+        double b = (data[mirrorIndex(j - i)] + data[mirrorIndex(j + i)]) / 2.0;
         buffer[j] = (b < a) ? b : a;
       }
       for (R_xlen_t j = i; j < n - i; ++j) {

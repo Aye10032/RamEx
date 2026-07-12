@@ -35,8 +35,14 @@ static void AUCWorker (const NumericMatrix& matrix,
       temp[i].second = group[i];
     }
 
-    std::sort(temp.begin(), temp.end(),
-              [](const auto &a, const auto &b){ return a.first > b.first; });
+    std::sort(
+      temp.begin(),
+      temp.end(),
+      [](const std::pair<double, int>& a,
+        const std::pair<double, int>& b) {
+        return a.first > b.first;
+      }
+    );
     
     std::size_t i = 0;
     while (i < nSamples) {

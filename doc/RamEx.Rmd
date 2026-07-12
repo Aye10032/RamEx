@@ -103,7 +103,7 @@ data_cos <- Intraramanome.Analysis.2Dcos(data_cleaned)
 ## Phenotype analysis
 RamEx provides four types of phenotype analysis: Louvain clustering, K-means clustering, Gaussian mixture model and hierarchical clustering.
 ```{r}
-clusters_louvain <- Phenotype.Analysis.Louvaincluster(object = data_cleaned, resolutions = c(0.8)) 
+clusters_louvain <- Phenotype.Analysis.Louvain(object = data_cleaned, resolutions = c(0.8)) 
 clusters_kmneans <- Phenotype.Analysis.Kmeans(data_cleaned,5)
 clusters_gmm <- Phenotype.Analysis.Gmm(data_cleaned)
 clusters_hca <- Phenotype.Analysis.Hca(data_cleaned)

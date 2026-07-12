@@ -57,7 +57,6 @@ Feature.Reduction.Pca <- function(object, show = TRUE, save=FALSE, n_pc = 2) {
 #' 
 #' @return The updated Ramanome object with the t-SNE results appended to the reductions slot.
 #' @export Feature.Reduction.Tsne
-#' @importFrom Rtsne Rtsne
 #' @importFrom ggplot2 ggplot
 #' @importFrom ggplot2 geom_point
 #' @importFrom ggplot2 labs
@@ -69,6 +68,10 @@ Feature.Reduction.Pca <- function(object, show = TRUE, save=FALSE, n_pc = 2) {
 #' data.reduction.tsne <- Feature.Reduction.Tsne(data_processed, show=TRUE, save = FALSE)
 Feature.Reduction.Tsne <- function(object, PCA=20, n_pc = 2, perplexity=5, theta=0.5, max_iter=1000,show = TRUE, save=FALSE, seed=42) {
   set.seed(seed)
+  if (!requireNamespace("Rtsne", quietly = TRUE)) {
+    stop("Feature.Reduction.Tsne() requires 'Rtsne'. Install it with install.packages('Rtsne').",
+        call. = FALSE)
+  }
   if (!is.null(PCA)) {
     if (is.null(object@reductions$PCA)) {object <- Feature.Reduction.Pca(object, n_pc =PCA, show = FALSE)} 
     if (ncol(object@reductions$PCA) < PCA) {object <- Feature.Reduction.Pca(object, n_pc =PCA, show = FALSE)}
@@ -122,7 +125,6 @@ Feature.Reduction.Tsne <- function(object, PCA=20, n_pc = 2, perplexity=5, theta
 #' @return The updated Ramanome object with the UMAP reduction results.
 #' @export Feature.Reduction.Umap
 #' 
-#' @importFrom uwot umap
 #' @importFrom irlba prcomp_irlba
 #' @importFrom parallel detectCores
 #' @importFrom ggplot2 ggplot
@@ -137,6 +139,14 @@ Feature.Reduction.Tsne <- function(object, PCA=20, n_pc = 2, perplexity=5, theta
 #'
 Feature.Reduction.Umap <- function(object, PCA=20, n_pc = 2, n_neighbors=30, min.dist=0.01,spread=1, show = TRUE, save=FALSE, seed=42) {
   set.seed(seed)
+  if (!requireNamespace("uwot", quietly = TRUE)) {
+    stop(
+      "Feature.Reduction.Umap() requires the optional package 'uwot'. ",
+      "Install it with install.packages('uwot').",
+      call. = FALSE
+    )
+  }
+
   if (!is.null(PCA)) {
     if (is.null(object@reductions$PCA) ) {object <- Feature.Reduction.Pca(object, n_pc =PCA, show = FALSE)} 
     if (ncol(object@reductions$PCA) < PCA) {object <- Feature.Reduction.Pca(object, n_pc =PCA, show = FALSE)}

@@ -613,7 +613,6 @@ Intraramanome.Analysis.Irca.Global <- function(object, threshold = 0.6, show = T
 #' This function performs local IRCA analysis on the given Raman spectroscopy data object.
 #' It generates negative IRCA plots for each group and saves them as png files.
 #'
-#' @importFrom Cairo Cairo
 #' @param object A Ramanome object.
 #' @param bands_ann The band annotation data recording the band numbers and their corresponding groups.
 #' @param show Logical value to indicate whether to show the IRCA plots. Default is TRUE.
@@ -630,6 +629,11 @@ Intraramanome.Analysis.Irca.Global <- function(object, threshold = 0.6, show = T
 #' Intraramanome.Analysis.Irca.Local(data_processed, bands_ann = bands_ann)
 
 Intraramanome.Analysis.Irca.Local <- function(object, bands_ann, threshold = 0.6, show = TRUE, save = FALSE) {
+  if (!requireNamespace("Cairo", quietly = TRUE)) {
+    stop("This plotting function requires 'Cairo'. Install it with install.packages('Cairo').",
+        call. = FALSE)
+  }
+
   dataset <- get.nearest.dataset(object)
   waves <- round(object@wavenumber, 0)
   locs <- unlist(lapply(as.numeric(bands_ann$Wave_num), function(x)which.min(abs(object@wavenumber - x))))

@@ -96,12 +96,26 @@ Preprocessing.Baseline.SNIP <- function(object,
     n_threads <- 1
   }
 
-  corrected <- SNIPBaselineCpp(
+  spectra_padded <- cbind(
+    spectra[, 1, drop = FALSE],
     spectra,
+    spectra[, ncol(spectra), drop = FALSE]
+  )
+
+  wavenumber <- object@wavenumber
+  colnames(spectra_padded) <- as.character(c(
+    wavenumber[1] - 1,
+    wavenumber,
+    wavenumber[length(wavenumber)] + 1
+  ))
+
+  corrected <- SNIPBaselineCpp(
+    spectra_padded,
     iterations = iterations,
     decreasing = decreasing,
     n_threads = n_threads
   )
+  corrected <- corrected[, seq.int(2L, ncol(corrected) - 1L), drop = FALSE]
   colnames(corrected) <- object@wavenumber
   object@datasets$baseline.data <- corrected
 

@@ -24,8 +24,7 @@
 
 ### Installation
 ```
-library('devtools')
-install_github("qibebt-bioinfo/RamEx")
+remotes::install_github("qibebt-bioinfo/RamEx")
 ```
 ### Data Loading
 ```{r}
